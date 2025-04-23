@@ -247,7 +247,7 @@ export class SystemTray extends Service {
         Gio.bus_own_name(
             Gio.BusType.SESSION,
             'org.kde.StatusNotifierWatcher',
-            Gio.BusNameOwnerFlags.NONE,
+            Gio.BusNameOwnerFlags.REPLACE,
             (connection: Gio.DBusConnection) => {
                 this._dbus = Gio.DBusExportedObject
                     .wrapJSObject(StatusNotifierWatcherIFace as string, this);
@@ -275,24 +275,25 @@ export class SystemTray extends Service {
         invocation.return_value(null);
 
         const item = new TrayItem(busName, objectPath);
+        const itemID = `${busName}${objectPath}`;
         item.connect('ready', () => {
-            this._items.set(busName, item);
-            this.emit('added', busName);
+            this._items.set(itemID, item);
+            this.emit('added', itemID);
             this.notify('items');
             this.emit('changed');
             this._dbus.emit_signal(
                 'StatusNotifierItemRegistered',
-                new GLib.Variant('(s)', [busName + objectPath]),
+                new GLib.Variant('(s)', [itemID]),
             );
         });
         item.connect('removed', () => {
-            this._items.delete(busName);
-            this.emit('removed', busName);
+            this._items.delete(itemID);
+            this.emit('removed', itemID);
             this.notify('items');
             this.emit('changed');
             this._dbus.emit_signal(
                 'StatusNotifierItemUnregistered',
-                new GLib.Variant('(s)', [busName]),
+                new GLib.Variant('(s)', [itemID]),
             );
         });
     }
